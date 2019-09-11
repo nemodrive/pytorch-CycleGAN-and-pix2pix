@@ -125,7 +125,7 @@ def __make_power_2(img, base, method=Image.BICUBIC):
 
 def __scale_width(img, target_width, method=Image.BICUBIC):
     ow, oh = img.size
-    if (ow == target_width):
+    if ow == target_width:
         return img
     w = target_width
     h = int(target_width * oh / ow)
@@ -136,7 +136,7 @@ def __crop(img, pos, size):
     ow, oh = img.size
     x1, y1 = pos
     tw = th = size
-    if (ow > tw or oh > th):
+    if ow > tw or oh > th:
         return img.crop((x1, y1, x1 + tw, y1 + th))
     return img
 

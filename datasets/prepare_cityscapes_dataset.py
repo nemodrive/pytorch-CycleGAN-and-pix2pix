@@ -14,8 +14,10 @@ Example usage:
 python prepare_cityscapes_dataset.py --gitFine_dir ./gtFine/ --leftImg8bit_dir ./leftImg8bit --output_dir ./datasets/cityscapes/
 """
 
+
 def load_resized_img(path):
     return Image.open(path).convert('RGB').resize((256, 256))
+
 
 def check_matching_pair(segmap_path, photo_path):
     segmap_identifier = os.path.basename(segmap_path).replace('_gtFine_color', '')
@@ -23,7 +25,7 @@ def check_matching_pair(segmap_path, photo_path):
         
     assert segmap_identifier == photo_identifier, \
         "[%s] and [%s] don't seem to be matching. Aborting." % (segmap_path, photo_path)
-    
+
 
 def process_cityscapes(gtFine_dir, leftImg8bit_dir, output_dir, phase):
     save_phase = 'test' if phase == 'val' else 'train'
@@ -64,14 +66,6 @@ def process_cityscapes(gtFine_dir, leftImg8bit_dir, output_dir, phase):
         
         if i % (len(segmap_paths) // 10) == 0:
             print("%d / %d: last image saved at %s, " % (i, len(segmap_paths), savepath))
-
-
-        
-        
-        
-        
-        
-    
 
 
 if __name__ == '__main__':
