@@ -72,8 +72,12 @@ class NemodriveDataset(BaseDataset):
         # set the patch height and width
         patch_height, patch_width = self.crop, self.crop
 
-        # resize image A
+        # crop image A
         A = A.crop((A.size[0] - patch_height, A.size[1] - patch_width, A.size[0], A.size[1]))
+
+        # TODO resize A
+        # human always in image - max of human image to fit between 0.7 and 0.9
+        # add one channel for mask
 
         # B = road , B_seg = segmented roads
         B = Image.open(self.df_road[0][index]).convert('RGB')
