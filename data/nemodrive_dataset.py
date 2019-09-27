@@ -8,6 +8,7 @@ import torch
 import cv2
 from resizeimage import resizeimage
 import random
+import numpy as np
 
 
 PEOPLE_PATH = "datasets/nemodrive/people_path.txt"
@@ -66,11 +67,13 @@ class NemodriveDataset(BaseDataset):
         idp = random.randrange(len(self.df_people) - 1)
 
         # A = human
-        A = Image.open(self.df_people[0][idp]).convert('RGB')
+        A = Image.open(self.df_people[0][idp]).convert('RGBA')
         A_path = self.df_people[0][idp]
 
         # set the patch height and width
         patch_height, patch_width = self.crop, self.crop
+
+        # A = resizeA(A);
 
         # crop image A
         A = A.crop((A.size[0] - patch_height, A.size[1] - patch_width, A.size[0], A.size[1]))
@@ -81,6 +84,7 @@ class NemodriveDataset(BaseDataset):
 
         # B = road , B_seg = segmented roads
         B = Image.open(self.df_road[0][index]).convert('RGB')
+        B_without_human = B
         B_seg = Image.open(self.df_road[1][index]).convert('RGB')
         B_path = self.df_road[0][index]
 
@@ -89,10 +93,19 @@ class NemodriveDataset(BaseDataset):
         B = B.crop((x - patch_height, y - patch_width, x, y))
 
         #get patch with people on road
-        idp = random.randrange(len(self.df_patch) - 1)
+        # idp = random.randrange(len(self.df_patch) - 1)
+        idp = random.randrange(len(self.df_road) - 1)
 
-        C = Image.open(self.df_patch[0][idp]).convert('RGB')
+        # C = Image.open(self.df_patch[0][idp]).convert('RGB')
+        C = Image.open(self.df_road[0][idp]).convert('RGB')
+        C_seg = Image.open(self.df_road[1][idp]).convert('RGB')
+
+        x, y = self.road_coords(C_seg, patch_width, patch_height)
+        C = C.crop((x - patch_height, y - patch_width, x, y))
         C_path = self.df_people[0][idp]
+
+        A.load()
+        B.paste(A, mask=A.split()[3])
 
         # split AB image into A and B
         # w, h = AB.size
@@ -102,21 +115,48 @@ class NemodriveDataset(BaseDataset):
 
         # apply the same transform to both A and B
         transform_params = get_params(self.opt, A.size)
-        A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
+        # A_transform = get_transform(self.opt, transform_params, grayscale=(self.input_nc == 1))
+        B_without_human_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
         B_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
         C_transform = get_transform(self.opt, transform_params, grayscale=(self.output_nc == 1))
 
-        A = A_transform(A)
+        # A = A_transform(A)
         B = B_transform(B)
+        B_without_human = B_without_human_transform(B_without_human)
         C = C_transform(C)
+
+        # print(type(B), B.size(), B_without_human.size())
+
+        # B_pix = B.load()
+        # B_human_pix = B_without_human.load()
+
+        mask_human = (B_without_human == B).sum(dim = 0) == 3
+
+        mask_human = mask_human.unsqueeze(0).expand(3, patch_height, patch_width)
+
+        mask_human = 1 - mask_human
+
+        mask_human = mask_human.type(torch.float)
+
+        # print(mask_human.size())
+        # for row in range(patch_height):
+        #     for column in range(patch_width):
+        #         if B_without_human[0, row, column] == B[0, row, column] and B_without_human[1, row, column] == B[1, row, column] and B_without_human[2, row, column] == B[2, row, column]:
+        #             mask_human[0, row, column] = 1
+        #             mask_human[1, row, column] = 1
+        #             mask_human[2, row, column] = 1
 
         # return A
         # return {'A': A, 'B': B, 'A_paths': A_path, 'B_paths': B_path}
         # patch_with_road, cropped_obj, patch_with_obj_on_bg = torch.rand()
         return {'patch_with_bg': B,
-                'cropped_obj': A,
+                'patch_without_human': B_without_human,
+                'mask': mask_human,
+                # 'cropped_obj': A,
                 'patch_with_obj_on_bg': C,
-                'A_paths': A_path, 'B_paths': B_path, 'C_paths': C_path}
+                'A_paths': A_path,
+                'B_paths': B_path,
+                'C_paths': C_path}
 
     def __len__(self):
         """Return the total number of images in the dataset."""
